@@ -4,9 +4,10 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.llm import LLM
-from app.logger import logger
-from app.schema import ROLE_TYPE, AgentState, Memory, Message
+from app.common.llm import LLM
+from app.common.logger import logger
+from app.core.schema import ROLE_TYPE, AgentState, Message
+from app.memory.base import Memory
 
 
 class BaseAgent(BaseModel, ABC):

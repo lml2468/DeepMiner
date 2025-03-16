@@ -16,10 +16,10 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from app.config import LLMSettings, config
-from app.exceptions import TokenLimitExceeded
-from app.logger import logger  # Assuming a logger is set up in your app
-from app.schema import (
+from app.common.config import LLMSettings, config
+from app.common.exceptions import TokenLimitExceeded
+from app.common.logger import logger  # Assuming a logger is set up in your app
+from app.core.schema import (
     ROLE_VALUES,
     TOOL_CHOICE_TYPE,
     TOOL_CHOICE_VALUES,
@@ -408,7 +408,6 @@ class LLM:
 
             # Check if response is valid
             if not response.choices or not response.choices[0].message:
-                print(response)
                 raise ValueError("Invalid or empty response from LLM")
 
             # Update token counts

@@ -66,3 +66,8 @@ temperature = 0.0                      # Controls randomness for vision model
 # [search]
 # Search engine for agent to use. Default is "Google", can be set to "Baidu" or "DuckDuckGo".
 #engine = "Google"
+
+# Optional configuration for workspace directory
+# [workspace]
+# Root directory for storing files created by agents. Default is PROJECT_ROOT/workspace
+#workspace_root = "./workspace"

@@ -2,7 +2,7 @@ import asyncio
 import os
 from typing import Optional
 
-from app.exceptions import ToolError
+from app.common.exceptions import ToolError
 from app.tool.base import BaseTool, CLIResult, ToolResult
 
 

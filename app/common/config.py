@@ -1,3 +1,4 @@
+import os
 import threading
 import tomllib
 from pathlib import Path
@@ -8,11 +9,10 @@ from pydantic import BaseModel, Field
 
 def get_project_root() -> Path:
     """Get the project root directory"""
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parent.parent.parent
 
 
 PROJECT_ROOT = get_project_root()
-WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 
 
 class LLMSettings(BaseModel):
@@ -68,6 +68,10 @@ class AppConfig(BaseModel):
     )
     search_config: Optional[SearchSettings] = Field(
         None, description="Search configuration"
+    )
+    workspace_root: Path = Field(
+        default_factory=lambda: PROJECT_ROOT / "workspace",
+        description="Root directory for workspace files"
     )
 
     class Config:
@@ -165,6 +169,17 @@ class Config:
         search_settings = None
         if search_config:
             search_settings = SearchSettings(**search_config)
+            
+        # Handle workspace configuration
+        workspace_config = raw_config.get("workspace", {})
+        workspace_root = None
+        if workspace_config and "workspace_root" in workspace_config:
+            workspace_path = workspace_config["workspace_root"]
+            # Convert to absolute path if relative
+            if not os.path.isabs(workspace_path):
+                workspace_root = PROJECT_ROOT / workspace_path
+            else:
+                workspace_root = Path(workspace_path)
 
         config_dict = {
             "llm": {
@@ -177,6 +192,10 @@ class Config:
             "browser_config": browser_settings,
             "search_config": search_settings,
         }
+        
+        # Add workspace_root if configured
+        if workspace_root:
+            config_dict["workspace_root"] = workspace_root
 
         self._config = AppConfig(**config_dict)
 
@@ -191,6 +210,10 @@ class Config:
     @property
     def search_config(self) -> Optional[SearchSettings]:
         return self._config.search_config
+        
+    @property
+    def workspace_root(self) -> Path:
+        return self._config.workspace_root
 
 
 config = Config()

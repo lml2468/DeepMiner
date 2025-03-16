@@ -3,7 +3,7 @@ import os
 import aiofiles
 
 from app.tool.base import BaseTool
-from app.config import WORKSPACE_ROOT
+from app.common.config import config
 
 
 class FileSaver(BaseTool):
@@ -49,9 +49,9 @@ The tool accepts content and a file path, and saves the content to that location
             # Place the generated file in the workspace directory
             if os.path.isabs(file_path):
                 file_name = os.path.basename(file_path)
-                full_path = os.path.join(WORKSPACE_ROOT, file_name)
+                full_path = os.path.join(config.workspace_root, file_name)
             else:
-                full_path = os.path.join(WORKSPACE_ROOT, file_path)
+                full_path = os.path.join(config.workspace_root, file_path)
 
             # Ensure the directory exists
             directory = os.path.dirname(full_path)

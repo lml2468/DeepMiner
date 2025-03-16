@@ -1,24 +1,25 @@
 import json
 import time
 from typing import Dict, List, Optional, Union
+import uuid
 
 from pydantic import Field
 
-from app.agent.base import BaseAgent
-from app.flow.base import BaseFlow, PlanStepStatus
-from app.llm import LLM
-from app.logger import logger
-from app.schema import AgentState, Message, ToolChoice
+from app.core.base import BaseAgent
+from app.planning.base import BasePlanner, PlanStepStatus
+from app.common.llm import LLM
+from app.common.logger import logger
+from app.core.schema import AgentState, Message, ToolChoice
 from app.tool import PlanningTool
 
 
-class PlanningFlow(BaseFlow):
-    """A flow that manages planning and execution of tasks using agents."""
+class SimplePlanner(BasePlanner):
+    """A simple planner that manages planning and execution of tasks using agents."""
 
     llm: LLM = Field(default_factory=lambda: LLM())
     planning_tool: PlanningTool = Field(default_factory=PlanningTool)
     executor_keys: List[str] = Field(default_factory=list)
-    active_plan_id: str = Field(default_factory=lambda: f"plan_{int(time.time())}")
+    active_plan_id: str = Field(default_factory=lambda: f"plan_{uuid.uuid4()}")
     current_step_index: Optional[int] = None
 
     def __init__(
@@ -44,25 +45,103 @@ class PlanningFlow(BaseFlow):
         if not self.executor_keys:
             self.executor_keys = list(self.agents.keys())
 
-    def get_executor(self, step_type: Optional[str] = None) -> BaseAgent:
+    async def _get_step_executor_with_llm(self, step_info: dict) -> str:
         """
-        Get an appropriate executor agent for the current step.
-        Can be extended to select agents based on step type/requirements.
+        Use LLM to determine the most appropriate executor for a given step.
+        
+        Args:
+            step_info: Dictionary containing step information, including 'text'
+            
+        Returns:
+            The key of the recommended executor agent
         """
-        # If step type is provided and matches an agent key, use that agent
-        if step_type and step_type in self.agents:
-            return self.agents[step_type]
+        if not step_info or "text" not in step_info:
+            return None
+            
+        step_text = step_info["text"]
+        
+        # Create a system message that explains the task
+        system_message = Message.system_message(
+            "You are an agent dispatcher. Your task is to analyze a step description "
+            "and determine which specialized agent would be best suited to execute it. "
+            "Choose the most appropriate agent based on the step's requirements and each agent's capabilities."
+        )
+        
+        # Create a prompt that describes available agents and their capabilities
+        available_agents_desc = "\n".join([
+            f"- {key}: {agent.description}" for key, agent in self.agents.items()
+        ])
+        
+        user_message = Message.user_message(
+            f"Based on the following step description, which agent should execute it?\n\n"
+            f"Step: {step_text}\n\n"
+            f"Available agents:\n{available_agents_desc}\n\n"
+            f"Respond with just the agent key (e.g., 'WebAgent', 'DataMiner', 'SWEAgent') that should handle this step."
+        )
+        
+        # Call LLM to get recommendation
+        # Extract agent key from response (assuming response is just the agent key)
+        recommended_agent = await self.llm.ask(
+            messages=[user_message],
+            system_msgs=[system_message]
+        )
+        
+        # Validate that the recommended agent exists
+        if recommended_agent in self.agents:
+            logger.info(f"Automatically selecting agent '{recommended_agent}' for task: {step_text[:50]}...")
+            return recommended_agent
+        else:
+            # If LLM recommends an invalid agent, try to find a close match
+            for key in self.agents.keys():
+                if key.lower() in recommended_agent.lower() or recommended_agent.lower() in key.lower():
+                    logger.info(f"Using closest match '{key}' instead of LLM recommendation '{recommended_agent}'")
+                    return key
+                    
+            # Fall back to default behavior if no match found
+            logger.warning(f"Recommended unknown agent '{recommended_agent}', falling back to default selection")
+            return None
 
-        # Otherwise use the first available executor or fall back to primary agent
+    async def get_executor(self, step_info: Optional[dict] = None) -> BaseAgent:
+        """
+        Get an appropriate executor agent for the current step using LLM for intelligent selection.
+        
+        Args:
+            step_info: Dictionary containing step information
+            
+        Returns:
+            The selected executor agent
+        """
+        # If no step info provided, use default selection logic
+        if not step_info:
+            # Use first available executor or fall back to primary agent
+            for key in self.executor_keys:
+                if key in self.agents:
+                    return self.agents[key]
+            return self.primary_agent
+        
+        # First check if there's an explicit type tag in the step
+        step_type = step_info.get("type")
+        if step_type and step_type in self.agents:
+            logger.info(f"Using explicitly tagged agent '{step_type}' for step")
+            return self.agents[step_type]
+        
+        # If no explicit tag or tag doesn't match an agent, use LLM to recommend
+        recommended_agent_key = await self._get_step_executor_with_llm(step_info)
+        
+        # If LLM provided a valid recommendation, use it
+        if recommended_agent_key and recommended_agent_key in self.agents:
+            return self.agents[recommended_agent_key]
+        
+        # Fall back to default selection logic if LLM couldn't provide a valid recommendation
         for key in self.executor_keys:
             if key in self.agents:
                 return self.agents[key]
-
-        # Fallback to primary agent
+                
+        # Last resort: return primary agent
         return self.primary_agent
 
     async def execute(self, input_text: str) -> str:
-        """Execute the planning flow with agents."""
+        """Execute the simple planning with agents."""
         try:
             if not self.primary_agent:
                 raise ValueError("No primary agent available")
@@ -89,8 +168,8 @@ class PlanningFlow(BaseFlow):
                     break
 
                 # Execute current step with appropriate agent
-                step_type = step_info.get("type") if step_info else None
-                executor = self.get_executor(step_type)
+                step_info = step_info if step_info else {"text": "Execute next task"}
+                executor = await self.get_executor(step_info)
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
 
@@ -104,7 +183,7 @@ class PlanningFlow(BaseFlow):
             return f"Execution failed: {str(e)}"
 
     async def _create_initial_plan(self, request: str) -> None:
-        """Create an initial plan based on the request using the flow's LLM and PlanningTool."""
+        """Create an initial plan based on the request using the planning's LLM and PlanningTool."""
         logger.info(f"Creating initial plan with ID: {self.active_plan_id}")
 
         # Create a system message for plan creation
@@ -356,10 +435,10 @@ class PlanningFlow(BaseFlow):
             return f"Error: Unable to retrieve plan with ID {self.active_plan_id}"
 
     async def _finalize_plan(self) -> str:
-        """Finalize the plan and provide a summary using the flow's LLM directly."""
+        """Finalize the plan and provide a summary using the planning's LLM directly."""
         plan_text = await self._get_plan_text()
 
-        # Create a summary using the flow's LLM directly
+        # Create a summary using the planning's LLM directly
         try:
             system_message = Message.system_message(
                 "You are a planning assistant. Your task is to summarize the completed plan."

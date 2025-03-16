@@ -4,15 +4,11 @@ from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
-from app.agent.base import BaseAgent
+from app.core.base import BaseAgent
 
 
-class FlowType(str, Enum):
-    PLANNING = "planning"
-
-
-class BaseFlow(BaseModel, ABC):
-    """Base class for execution flows supporting multiple agents"""
+class BasePlanner(BaseModel, ABC):
+    """Base class for task execution supporting multiple agents"""
 
     agents: Dict[str, BaseAgent]
     tools: Optional[List] = None
@@ -46,7 +42,7 @@ class BaseFlow(BaseModel, ABC):
 
     @property
     def primary_agent(self) -> Optional[BaseAgent]:
-        """Get the primary agent for the flow"""
+        """Get the primary agent for the planning"""
         return self.agents.get(self.primary_agent_key)
 
     def get_agent(self, key: str) -> Optional[BaseAgent]:
@@ -54,12 +50,12 @@ class BaseFlow(BaseModel, ABC):
         return self.agents.get(key)
 
     def add_agent(self, key: str, agent: BaseAgent) -> None:
-        """Add a new agent to the flow"""
+        """Add a new agent to the planning"""
         self.agents[key] = agent
 
     @abstractmethod
     async def execute(self, input_text: str) -> str:
-        """Execute the flow with given input"""
+        """Execute the planning with given input"""
 
 
 class PlanStepStatus(str, Enum):
