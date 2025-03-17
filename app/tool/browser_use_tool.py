@@ -242,6 +242,9 @@ class BrowserUseTool(BaseTool):
                     return ToolResult(output=links)
 
                 elif action == "execute_js":
+                    # FIXME
+                    print("browser_use_tool_excute_js:", script)
+
                     if not script:
                         return ToolResult(
                             error="Script is required for 'execute_js' action"

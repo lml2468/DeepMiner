@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from pydantic import Field
 
+from app.common.config import config
 from app.core.toolcall import ToolCallAgent
 from app.prompt.dataminer import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import Terminate, ToolCollection, CreateChatCompletion
@@ -30,6 +33,7 @@ class DataMiner(ToolCallAgent):
 
     system_prompt: str = SYSTEM_PROMPT
     next_step_prompt: str = NEXT_STEP_PROMPT
+    working_dir: Path = config.workspace_root
 
     max_observe: int = 2000
     max_steps: int = 20
@@ -40,3 +44,10 @@ class DataMiner(ToolCallAgent):
             PythonExecute(), CreateChatCompletion(), FileSaver(), Terminate()
         )
     )
+
+    async def think(self) -> bool:
+        self.next_step_prompt = self.next_step_prompt.format(
+            working_dir=self.working_dir
+        )
+
+        return await super().think()

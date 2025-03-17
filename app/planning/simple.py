@@ -341,7 +341,7 @@ class SimplePlanner(BasePlanner):
                 step_status=PlanStepStatus.COMPLETED.value,
             )
             logger.info(
-                f"Marked step {self.current_step_index + 1} as completed in plan {self.active_plan_id}"
+                f"Marked step {self.current_step_index} as completed in plan {self.active_plan_id}"
             )
         except Exception as e:
             logger.warning(f"Failed to update plan status: {e}")

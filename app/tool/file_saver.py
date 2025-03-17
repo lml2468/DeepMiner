@@ -55,6 +55,9 @@ The tool accepts content and a file path, and saves the content to that location
             if directory and not os.path.exists(directory):
                 os.makedirs(directory)
 
+            # FIXME
+            print(f"Saving file to {full_path}")
+
             # Write directly to the file
             async with aiofiles.open(full_path, mode, encoding="utf-8") as file:
                 await file.write(content)
