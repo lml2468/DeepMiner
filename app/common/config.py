@@ -181,8 +181,6 @@ class Config:
             else:
                 workspace_root = Path(workspace_path)
 
-            print(f"Workspace root: {workspace_root}")
-
         config_dict = {
             "llm": {
                 "default": default_settings,

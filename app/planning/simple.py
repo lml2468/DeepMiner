@@ -1,15 +1,14 @@
 import json
-import time
-from typing import Dict, List, Optional, Union
 import uuid
+from typing import Dict, List, Optional, Union
 
 from pydantic import Field
 
-from app.core.base import BaseAgent
-from app.planning.base import BasePlanner, PlanStepStatus
 from app.common.llm import LLM
 from app.common.logger import logger
+from app.core.base import BaseAgent
 from app.core.schema import AgentState, Message, ToolChoice
+from app.planning.base import BasePlanner, PlanStepStatus
 from app.tool import PlanningTool
 
 
@@ -186,11 +185,12 @@ class SimplePlanner(BasePlanner):
         """Create an initial plan based on the request using the planning's LLM and PlanningTool."""
         logger.info(f"Creating initial plan with ID: {self.active_plan_id}")
 
-        # Create a system message for plan creation
+        # Create a system message for plan creation with language consistency instruction
         system_message = Message.system_message(
             "You are a planning assistant. Create a concise, actionable plan with clear steps. "
             "Focus on key milestones rather than detailed sub-steps. "
-            "Optimize for clarity and efficiency."
+            "Optimize for clarity and efficiency. "
+            "IMPORTANT: Your response MUST be in the same language as the user's request."
         )
 
         # Create a user message with the request

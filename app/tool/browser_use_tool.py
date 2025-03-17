@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from typing import Optional
 
 from browser_use import Browser as BrowserUseBrowser
@@ -12,7 +13,6 @@ from pydantic_core.core_schema import ValidationInfo
 from app.common.config import config
 from app.tool.base import BaseTool, ToolResult
 
-import os
 os.environ["ANONYMIZED_TELEMETRY"] = "false"
 
 

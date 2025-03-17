@@ -3,8 +3,8 @@ from typing import Optional
 
 from pydantic import Field
 
-from app.core.base import BaseAgent
 from app.common.llm import LLM
+from app.core.base import BaseAgent
 from app.core.schema import AgentState
 from app.memory.base import Memory
 

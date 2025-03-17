@@ -3,13 +3,12 @@ from typing import Any, List, Optional, Union
 
 from pydantic import Field
 
-from app.core.react import ReActAgent
 from app.common.exceptions import TokenLimitExceeded
 from app.common.logger import logger
-from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
+from app.core.react import ReActAgent
 from app.core.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice
+from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import CreateChatCompletion, Terminate, ToolCollection
-
 
 TOOL_CALL_REQUIRED = "Tool calls required but none provided"
 

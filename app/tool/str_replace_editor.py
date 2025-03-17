@@ -7,7 +7,6 @@ from app.tool import BaseTool
 from app.tool.base import CLIResult, ToolResult
 from app.tool.run import run
 
-
 Command = Literal[
     "view",
     "create",
