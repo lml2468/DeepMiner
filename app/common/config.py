@@ -169,7 +169,7 @@ class Config:
         search_settings = None
         if search_config:
             search_settings = SearchSettings(**search_config)
-            
+
         # Handle workspace configuration
         workspace_config = raw_config.get("workspace", {})
         workspace_root = None
@@ -180,6 +180,8 @@ class Config:
                 workspace_root = PROJECT_ROOT / workspace_path
             else:
                 workspace_root = Path(workspace_path)
+
+            print(f"Workspace root: {workspace_root}")
 
         config_dict = {
             "llm": {
@@ -192,7 +194,7 @@ class Config:
             "browser_config": browser_settings,
             "search_config": search_settings,
         }
-        
+
         # Add workspace_root if configured
         if workspace_root:
             config_dict["workspace_root"] = workspace_root
@@ -210,7 +212,7 @@ class Config:
     @property
     def search_config(self) -> Optional[SearchSettings]:
         return self._config.search_config
-        
+
     @property
     def workspace_root(self) -> Path:
         return self._config.workspace_root

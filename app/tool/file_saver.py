@@ -47,11 +47,8 @@ The tool accepts content and a file path, and saves the content to that location
         """
         try:
             # Place the generated file in the workspace directory
-            if os.path.isabs(file_path):
-                file_name = os.path.basename(file_path)
-                full_path = os.path.join(config.workspace_root, file_name)
-            else:
-                full_path = os.path.join(config.workspace_root, file_path)
+            file_name = os.path.basename(file_path)
+            full_path = os.path.join(config.workspace_root, file_name)
 
             # Ensure the directory exists
             directory = os.path.dirname(full_path)

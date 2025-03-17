@@ -5,7 +5,6 @@ from pydantic import Field
 from app.core.toolcall import ToolCallAgent
 from app.prompt.dataminer import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import Terminate, ToolCollection, CreateChatCompletion
-from app.tool.browser_use_tool import BrowserUseTool
 from app.tool.file_saver import FileSaver
 from app.tool.python_execute import PythonExecute
 
@@ -43,10 +42,3 @@ class DataMiner(ToolCallAgent):
             PythonExecute(), CreateChatCompletion(), FileSaver(), Terminate()
         )
     )
-
-    async def _handle_special_tool(self, name: str, result: Any, **kwargs):
-        if not self._is_special_tool(name):
-            return
-        else:
-            await self.available_tools.get_tool(BrowserUseTool().name).cleanup()
-            await super()._handle_special_tool(name, result, **kwargs)

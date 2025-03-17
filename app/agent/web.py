@@ -30,7 +30,7 @@ class WebAgent(ToolCallAgent):
             BrowserUseTool(), WebSearch(), FileSaver(), Terminate()
         )
     )
-    special_tool_names: List[str] = Field(default_factory=lambda: [Terminate().name])
+    special_tool_names: List[str] = Field(default_factory=lambda: [BrowserUseTool().name, Terminate().name])
 
     max_steps: int = 30
     current_url: Optional[str] = None

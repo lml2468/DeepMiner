@@ -48,44 +48,44 @@ class SimplePlanner(BasePlanner):
     async def _get_step_executor_with_llm(self, step_info: dict) -> str:
         """
         Use LLM to determine the most appropriate executor for a given step.
-        
+
         Args:
             step_info: Dictionary containing step information, including 'text'
-            
+
         Returns:
             The key of the recommended executor agent
         """
         if not step_info or "text" not in step_info:
             return None
-            
+
         step_text = step_info["text"]
-        
+
         # Create a system message that explains the task
         system_message = Message.system_message(
             "You are an agent dispatcher. Your task is to analyze a step description "
             "and determine which specialized agent would be best suited to execute it. "
             "Choose the most appropriate agent based on the step's requirements and each agent's capabilities."
         )
-        
+
         # Create a prompt that describes available agents and their capabilities
         available_agents_desc = "\n".join([
             f"- {key}: {agent.description}" for key, agent in self.agents.items()
         ])
-        
+
         user_message = Message.user_message(
             f"Based on the following step description, which agent should execute it?\n\n"
             f"Step: {step_text}\n\n"
             f"Available agents:\n{available_agents_desc}\n\n"
             f"Respond with just the agent key (e.g., 'WebAgent', 'DataMiner', 'SWEAgent') that should handle this step."
         )
-        
+
         # Call LLM to get recommendation
         # Extract agent key from response (assuming response is just the agent key)
         recommended_agent = await self.llm.ask(
             messages=[user_message],
             system_msgs=[system_message]
         )
-        
+
         # Validate that the recommended agent exists
         if recommended_agent in self.agents:
             logger.info(f"Automatically selecting agent '{recommended_agent}' for task: {step_text[:50]}...")
@@ -96,7 +96,7 @@ class SimplePlanner(BasePlanner):
                 if key.lower() in recommended_agent.lower() or recommended_agent.lower() in key.lower():
                     logger.info(f"Using closest match '{key}' instead of LLM recommendation '{recommended_agent}'")
                     return key
-                    
+
             # Fall back to default behavior if no match found
             logger.warning(f"Recommended unknown agent '{recommended_agent}', falling back to default selection")
             return None
@@ -104,10 +104,10 @@ class SimplePlanner(BasePlanner):
     async def get_executor(self, step_info: Optional[dict] = None) -> BaseAgent:
         """
         Get an appropriate executor agent for the current step using LLM for intelligent selection.
-        
+
         Args:
             step_info: Dictionary containing step information
-            
+
         Returns:
             The selected executor agent
         """
@@ -118,25 +118,25 @@ class SimplePlanner(BasePlanner):
                 if key in self.agents:
                     return self.agents[key]
             return self.primary_agent
-        
+
         # First check if there's an explicit type tag in the step
         step_type = step_info.get("type")
         if step_type and step_type in self.agents:
             logger.info(f"Using explicitly tagged agent '{step_type}' for step")
             return self.agents[step_type]
-        
+
         # If no explicit tag or tag doesn't match an agent, use LLM to recommend
         recommended_agent_key = await self._get_step_executor_with_llm(step_info)
-        
+
         # If LLM provided a valid recommendation, use it
         if recommended_agent_key and recommended_agent_key in self.agents:
             return self.agents[recommended_agent_key]
-        
+
         # Fall back to default selection logic if LLM couldn't provide a valid recommendation
         for key in self.executor_keys:
             if key in self.agents:
                 return self.agents[key]
-                
+
         # Last resort: return primary agent
         return self.primary_agent
 
@@ -270,13 +270,6 @@ class SimplePlanner(BasePlanner):
                     # Extract step type/category if available
                     step_info = {"text": step}
 
-                    # Try to extract step type from the text (e.g., [SEARCH] or [CODE])
-                    import re
-
-                    type_match = re.search(r"\[([A-Z_]+)\]", step)
-                    if type_match:
-                        step_info["type"] = type_match.group(1).lower()
-
                     # Mark current step as in_progress
                     try:
                         await self.planning_tool.execute(
@@ -348,7 +341,7 @@ class SimplePlanner(BasePlanner):
                 step_status=PlanStepStatus.COMPLETED.value,
             )
             logger.info(
-                f"Marked step {self.current_step_index} as completed in plan {self.active_plan_id}"
+                f"Marked step {self.current_step_index + 1} as completed in plan {self.active_plan_id}"
             )
         except Exception as e:
             logger.warning(f"Failed to update plan status: {e}")
