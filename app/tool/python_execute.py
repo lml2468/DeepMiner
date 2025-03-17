@@ -60,11 +60,11 @@ class PythonExecute(BaseTool):
                 safe_globals = {"__builtins__": __builtins__.__dict__.copy()}
 
             # FIXME
-            args = (code, result, safe_globals)
-            print("python_execute_args:", args)
+            print("python_execute_code:", code)
+            print("python_execute_result:", result)
 
             proc = multiprocessing.Process(
-                target=self._run_code, args=args
+                target=self._run_code, args=(code, result, safe_globals)
             )
             proc.start()
             proc.join(timeout)

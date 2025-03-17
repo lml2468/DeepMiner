@@ -185,17 +185,29 @@ class SimplePlanner(BasePlanner):
         """Create an initial plan based on the request using the planning's LLM and PlanningTool."""
         logger.info(f"Creating initial plan with ID: {self.active_plan_id}")
 
-        # Create a system message for plan creation with language consistency instruction
+        # Create a system message for plan creation with improved flexibility for task complexity
         system_message = Message.system_message(
-            "You are a planning assistant. Create a concise, actionable plan with clear steps. "
-            "Focus on key milestones rather than detailed sub-steps. "
-            "Optimize for clarity and efficiency. "
-            "IMPORTANT: Your response MUST be in the same language as the user's request."
+            """You are an expert Planning Assistant tasked with solving problems efficiently through structured plans.
+
+Your job is to analyze the task and create an appropriate plan that:
+1. Matches the complexity of the task - use fewer steps for simple tasks, more for complex ones
+2. Avoids over-decomposition - don't break simple tasks into too many steps
+3. Captures the essential actions needed to complete the task successfully
+
+GUIDELINES FOR PLAN CREATION:
+- For simple tasks: Create 2-3 high-level steps that cover the entire workflow
+- For medium complexity: Use 3-5 steps that capture key milestones
+- For complex tasks: Use 5-7 steps maximum, focusing on critical decision points and major phases
+- Each step should represent meaningful progress toward the goal
+- Steps should be logically connected with clear dependencies
+- Focus on outcomes rather than processes
+
+IMPORTANT: Your response MUST be in the same language as the user's request."""
         )
 
         # Create a user message with the request
         user_message = Message.user_message(
-            f"Create a reasonable plan with clear steps to accomplish the task: {request}"
+            f"Analyze this task and create an appropriately sized plan: {request}"
         )
 
         # Call LLM with PlanningTool
@@ -231,13 +243,28 @@ class SimplePlanner(BasePlanner):
         # If execution reached here, create a default plan
         logger.warning("Creating default plan")
 
+        # Detect language to provide appropriate default steps
+        def has_cjk_chars(text):
+            return any(ord(c) > 0x3000 for c in text)
+        
+        def has_cyrillic_chars(text):
+            return any(0x0400 <= ord(c) <= 0x04FF for c in text)
+        
+        # Create language-appropriate default steps
+        if has_cjk_chars(request):
+            default_steps = ["分析需求", "执行任务", "验证结果"]
+        elif has_cyrillic_chars(request):
+            default_steps = ["Анализ запроса", "Выполнение задачи", "Проверка результатов"]
+        else:
+            default_steps = ["Analyze request", "Execute task", "Verify results"]
+
         # Create default plan using the ToolCollection
         await self.planning_tool.execute(
             **{
                 "command": "create",
                 "plan_id": self.active_plan_id,
                 "title": f"Plan for: {request[:50]}{'...' if len(request) > 50 else ''}",
-                "steps": ["Analyze request", "Execute task", "Verify results"],
+                "steps": default_steps,
             }
         )
 
